@@ -100,7 +100,7 @@ export default function AdminPage() {
                                                                         <p className="font-medium text-purple-800 text-sm">{cls.course?.code}</p>
                                                                         <p className="text-xs text-purple-600">{cls.name}</p>
                                                                         <p className="text-xs text-gray-500 mt-1">
-                                                                            {cls.enrolled}/{cls.quota} • {cls.assistants?.map(a => a.name).join(', ') || 'No asst'}
+                                                                            {cls.enrolled_count || 0}/{cls.quota} • {cls.assistants?.map(a => a.user.name).join(', ') || 'No asst'}
                                                                         </p>
                                                                     </div>
                                                                 ) : (
