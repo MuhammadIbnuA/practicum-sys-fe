@@ -123,9 +123,9 @@ export default function RecapPage() {
                 bySession[c.sessionId].push({ studentId: c.studentId, status: c.status });
             });
 
-            // Save each session's changes
+            // Save each session's changes using admin endpoint
             for (const [sessionId, updates] of Object.entries(bySession)) {
-                await api.updateBatchAttendance(parseInt(sessionId), updates);
+                await api.adminUpdateAttendance(parseInt(sessionId), updates);
             }
 
             setSuccess(`${changes.length} perubahan berhasil disimpan!`);
@@ -331,8 +331,8 @@ export default function RecapPage() {
                                                     })}
                                                     <td className="px-4 py-3 text-center">
                                                         <span className={`inline-flex items-center justify-center w-12 h-8 rounded-lg text-sm font-bold ${percentage === null ? 'bg-gray-100 text-gray-400' :
-                                                                percentage >= 80 ? 'bg-green-100 text-green-700' :
-                                                                    percentage >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                                                            percentage >= 80 ? 'bg-green-100 text-green-700' :
+                                                                percentage >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                                                             }`}>
                                                             {percentage !== null ? `${percentage}%` : '-'}
                                                         </span>

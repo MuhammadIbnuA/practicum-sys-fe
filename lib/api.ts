@@ -177,6 +177,13 @@ class ApiClient {
     async getAllClasses() {
         return this.request<ClassItem[]>('/api/admin/classes');
     }
+
+    async adminUpdateAttendance(sessionId: number, updates: { studentId: number; status: string }[]) {
+        return this.request<{ updated: number }>(`/api/admin/sessions/${sessionId}/attendance`, {
+            method: 'PUT',
+            body: JSON.stringify({ updates }),
+        });
+    }
 }
 
 // Types
