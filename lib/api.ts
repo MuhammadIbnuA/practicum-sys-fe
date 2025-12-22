@@ -28,7 +28,7 @@ class ApiClient {
         return this.token;
     }
 
-    private async request<T>(
+    async request<T>(
         endpoint: string,
         options: RequestInit = {}
     ): Promise<ApiResponse<T>> {
@@ -149,6 +149,10 @@ class ApiClient {
         });
     }
 
+    async getAttendanceRecap(classId: number) {
+        return this.request<RecapData>(`/api/teaching/classes/${classId}/recap`);
+    }
+
     // Admin
     async getTimeSlots() {
         return this.request<TimeSlot[]>('/api/admin/time-slots');
@@ -164,6 +168,10 @@ class ApiClient {
 
     async getMasterSchedule(semesterId: number) {
         return this.request<MasterScheduleData>(`/api/admin/semesters/${semesterId}/schedule`);
+    }
+
+    async getAllClasses() {
+        return this.request<ClassItem[]>('/api/admin/classes');
     }
 }
 
@@ -302,4 +310,20 @@ export interface MasterScheduleData {
     schedule: Record<string, Record<string, Record<string, ClassItem | null>>>;
 }
 
+export interface RecapStudent {
+    id: number;
+    name: string;
+    email: string;
+    attendances: Record<number, { status: string; grade: number | null } | null>;
+}
+
+export interface RecapData {
+    class: ClassItem;
+    sessions: SessionItem[];
+    students: RecapStudent[];
+    stats: { session_number: number; hadir: number; alpha: number; pending: number; izin: number }[];
+    total_students: number;
+}
+
 export const api = new ApiClient();
+

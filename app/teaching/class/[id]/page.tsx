@@ -73,6 +73,12 @@ export default function TeachingClassPage() {
                                         📅 {currentClass.day_name} • 🕐 {currentClass.time_slot?.label} • 🏠 {currentClass.room?.code}
                                     </p>
                                 </div>
+                                <Link
+                                    href={`/recap/${classId}`}
+                                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
+                                >
+                                    📊 Rekap Absensi
+                                </Link>
                             </div>
                         </div>
 
