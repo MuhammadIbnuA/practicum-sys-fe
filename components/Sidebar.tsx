@@ -17,6 +17,8 @@ export default function Sidebar() {
         { label: 'Dashboard', href: '/dashboard', icon: '🏠' },
         { label: 'Jadwal Saya', href: '/schedule', icon: '📅' },
         { label: 'Enrollment', href: '/enroll', icon: '📝' },
+        { label: 'Rekap Saya', href: '/student/my-recap', icon: '📊' },
+        { label: 'Izin Saya', href: '/student/permissions', icon: '📋' },
     ];
 
     const adminMenus = [
@@ -25,9 +27,13 @@ export default function Sidebar() {
         { label: 'Kelola Kursus', href: '/admin?tab=courses', icon: '📚' },
         { label: 'Kelola Kelas', href: '/admin?tab=classes', icon: '🏫' },
         { label: 'Jadwal Besar', href: '/admin?tab=schedule', icon: '📅' },
+        { label: 'Rekap Asisten', href: '/admin/assistant-recap', icon: '👥' },
+        { label: 'Log Asisten', href: '/admin/assistant-logs', icon: '📒' },
+        { label: 'Perizinan', href: '/admin/permissions', icon: '📋' },
     ];
 
     const menus = isAdmin ? adminMenus : studentMenus;
+
 
     return (
         <aside className="w-64 min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col shadow-xl">
@@ -48,8 +54,8 @@ export default function Sidebar() {
             <div className="px-6 py-4 border-b border-slate-700">
                 <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shadow ${isAdmin
-                            ? 'bg-gradient-to-br from-amber-400 to-orange-500'
-                            : 'bg-gradient-to-br from-emerald-400 to-cyan-500'
+                        ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                        : 'bg-gradient-to-br from-emerald-400 to-cyan-500'
                         }`}>
                         {user.name?.charAt(0).toUpperCase() || '?'}
                     </div>
@@ -57,8 +63,8 @@ export default function Sidebar() {
                         <p className="font-semibold text-sm truncate">{user.name}</p>
                         <p className="text-xs text-slate-400 truncate">{user.email}</p>
                         <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${isAdmin
-                                ? 'bg-amber-500/20 text-amber-400'
-                                : 'bg-emerald-500/20 text-emerald-400'
+                            ? 'bg-amber-500/20 text-amber-400'
+                            : 'bg-emerald-500/20 text-emerald-400'
                             }`}>
                             {isAdmin ? 'Admin' : 'Mahasiswa'}
                         </span>
@@ -82,10 +88,10 @@ export default function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
-                                    ? isAdmin
-                                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
-                                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                                    : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
+                                ? isAdmin
+                                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
+                                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                                : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
                                 }`}
                         >
                             <span className="text-lg">{item.icon}</span>
