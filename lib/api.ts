@@ -153,6 +153,10 @@ class ApiClient {
         return this.request<RecapData>(`/api/teaching/classes/${classId}/recap`);
     }
 
+    async finalizeSession(sessionId: number) {
+        return this.request<{ markedAlpha: number; totalStudents: number }>(`/api/teaching/sessions/${sessionId}/finalize`, { method: 'POST' });
+    }
+
     // Admin
     async getTimeSlots() {
         return this.request<TimeSlot[]>('/api/admin/time-slots');
@@ -234,6 +238,7 @@ export interface SessionItem {
     type: string;
     date?: string;
     pending_count?: number;
+    is_finalized?: boolean;
 }
 
 export interface ScheduleData {
