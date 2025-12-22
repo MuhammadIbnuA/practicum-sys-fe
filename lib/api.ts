@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://practicum-sys-be.vercel.app';
 
 interface ApiResponse<T = unknown> {
     success: boolean;
