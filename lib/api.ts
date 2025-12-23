@@ -6,31 +6,108 @@ interface ApiResponse<T = unknown> {
     data: T;
 }
 
-class ApiClient {
-    private token: string | null = null;
+interface AuthTokens {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+}
 
-    setToken(token: string | null) {
-        this.token = token;
+class ApiClient {
+    private accessToken: string | null = null;
+    private refreshToken: string | null = null;
+    private isRefreshing = false;
+    private refreshPromise: Promise<boolean> | null = null;
+
+    constructor() {
         if (typeof window !== 'undefined') {
-            if (token) {
-                localStorage.setItem('token', token);
-            } else {
-                localStorage.removeItem('token');
+            this.accessToken = localStorage.getItem('accessToken');
+            this.refreshToken = localStorage.getItem('refreshToken');
+        }
+    }
+
+    setTokens(tokens: AuthTokens | null) {
+        if (tokens) {
+            this.accessToken = tokens.accessToken;
+            this.refreshToken = tokens.refreshToken;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', tokens.accessToken);
+                localStorage.setItem('refreshToken', tokens.refreshToken);
+            }
+        } else {
+            this.accessToken = null;
+            this.refreshToken = null;
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
             }
         }
     }
 
-    getToken(): string | null {
-        if (this.token) return this.token;
-        if (typeof window !== 'undefined') {
-            this.token = localStorage.getItem('token');
+    // Legacy support for existing code
+    setToken(token: string | null) {
+        if (token) {
+            this.accessToken = token;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', token);
+            }
+        } else {
+            this.setTokens(null);
         }
-        return this.token;
+    }
+
+    getToken(): string | null {
+        if (this.accessToken) return this.accessToken;
+        if (typeof window !== 'undefined') {
+            this.accessToken = localStorage.getItem('accessToken');
+        }
+        return this.accessToken;
+    }
+
+    private async tryRefreshToken(): Promise<boolean> {
+        if (!this.refreshToken) return false;
+
+        // Prevent multiple simultaneous refresh attempts
+        if (this.isRefreshing) {
+            return this.refreshPromise || Promise.resolve(false);
+        }
+
+        this.isRefreshing = true;
+        this.refreshPromise = (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken: this.refreshToken }),
+                });
+
+                if (!res.ok) {
+                    this.setTokens(null);
+                    return false;
+                }
+
+                const data = await res.json();
+                this.setTokens({
+                    accessToken: data.data.accessToken,
+                    refreshToken: data.data.refreshToken,
+                    expiresIn: data.data.expiresIn
+                });
+                return true;
+            } catch {
+                this.setTokens(null);
+                return false;
+            } finally {
+                this.isRefreshing = false;
+                this.refreshPromise = null;
+            }
+        })();
+
+        return this.refreshPromise;
     }
 
     async request<T>(
         endpoint: string,
-        options: RequestInit = {}
+        options: RequestInit = {},
+        retried = false
     ): Promise<ApiResponse<T>> {
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
@@ -49,6 +126,14 @@ class ApiClient {
 
         const data = await res.json();
 
+        // Handle token expiry - try refresh once
+        if (res.status === 401 && !retried && this.refreshToken) {
+            const refreshed = await this.tryRefreshToken();
+            if (refreshed) {
+                return this.request<T>(endpoint, options, true);
+            }
+        }
+
         if (!res.ok) {
             throw new Error(data.message || 'Request failed');
         }
@@ -58,26 +143,42 @@ class ApiClient {
 
     // Auth
     async login(email: string, password: string) {
-        const res = await this.request<{ user: User; token: string }>('/api/auth/login', {
+        const res = await this.request<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }>('/api/auth/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
         });
-        this.setToken(res.data.token);
+        this.setTokens({
+            accessToken: res.data.accessToken,
+            refreshToken: res.data.refreshToken,
+            expiresIn: res.data.expiresIn
+        });
         return res.data;
     }
 
     async register(email: string, password: string, name: string) {
-        const res = await this.request<{ user: User; token: string }>('/api/auth/register', {
+        const res = await this.request<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }>('/api/auth/register', {
             method: 'POST',
             body: JSON.stringify({ email, password, name }),
         });
-        this.setToken(res.data.token);
+        this.setTokens({
+            accessToken: res.data.accessToken,
+            refreshToken: res.data.refreshToken,
+            expiresIn: res.data.expiresIn
+        });
         return res.data;
     }
 
     async getProfile() {
         return this.request<User>('/api/auth/me');
     }
+
+    async changePassword(currentPassword: string, newPassword: string) {
+        return this.request('/api/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword }),
+        });
+    }
+
 
     logout() {
         this.setToken(null);
