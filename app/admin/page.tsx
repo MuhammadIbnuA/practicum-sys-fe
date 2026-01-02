@@ -359,7 +359,11 @@ export default function AdminPage() {
                   </div>
                 </Card>
 
-                {schedule && schedule.rooms.map((room: Room) => (
+                {!schedule || !schedule.rooms || schedule.rooms.length === 0 ? (
+                  <Card className="text-center py-12">
+                    <p className="text-gray-500">Tidak ada data jadwal untuk semester ini</p>
+                  </Card>
+                ) : schedule.rooms.map((room: Room) => (
                   <div key={room.id} className="mb-8">
                     <h3 className="font-semibold text-gray-900 mb-3">{room.name} ({room.code})</h3>
                     <Card padding="none" className="overflow-hidden">
@@ -391,7 +395,7 @@ export default function AdminPage() {
                                           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 hover:bg-indigo-100 transition-colors">
                                             <p className="font-medium text-indigo-900 text-xs">{cls.course?.code}</p>
                                             <p className="text-xs text-indigo-600">{cls.name}</p>
-                                            <p className="text-xs text-gray-500 mt-1">{cls.enrolled_count || 0}/{cls.quota}</p>
+                                            <p className="text-xs text-gray-500 mt-1">{(cls as { enrolled?: number }).enrolled || cls.enrolled_count || 0}/{cls.quota}</p>
                                           </div>
                                         </Link>
                                       ) : (
