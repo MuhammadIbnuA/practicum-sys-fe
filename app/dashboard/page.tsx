@@ -46,6 +46,9 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-500 mt-1">Selamat datang, {user.name}</p>
+              {user.nim && (
+                <p className="text-sm text-gray-400 mt-1">NIM: {user.nim}</p>
+              )}
             </div>
             {user.is_admin && (
               <Link href="/admin">

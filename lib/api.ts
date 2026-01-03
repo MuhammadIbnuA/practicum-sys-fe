@@ -155,10 +155,10 @@ class ApiClient {
         return res.data;
     }
 
-    async register(email: string, password: string, name: string) {
+    async register(email: string, password: string, name: string, nim?: string) {
         const res = await this.request<{ user: User; accessToken: string; refreshToken: string; expiresIn: number }>('/api/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ email, password, name }),
+            body: JSON.stringify({ email, password, name, nim }),
         });
         this.setTokens({
             accessToken: res.data.accessToken,
@@ -292,6 +292,7 @@ export interface User {
     id: number;
     email: string;
     name: string;
+    nim?: string;  // Nomor Induk Siswa (Student ID Number)
     is_admin: boolean;
 }
 

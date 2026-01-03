@@ -11,6 +11,7 @@ export default function HomePage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [nim, setNim] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function HomePage() {
       if (isLogin) {
         await login(email, password);
       } else {
-        await register(email, password, name);
+        await register(email, password, name, nim || undefined);
       }
       router.push('/dashboard');
     } catch (err) {
@@ -114,14 +115,25 @@ export default function HomePage() {
           {error && <Alert type="error">{error}</Alert>}
 
           {!isLogin && (
-            <Input
-              label="Nama Lengkap"
-              type="text"
-              placeholder="Masukkan nama"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required={!isLogin}
-            />
+            <>
+              <Input
+                label="Nama Lengkap"
+                type="text"
+                placeholder="Masukkan nama"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required={!isLogin}
+              />
+
+              <Input
+                label="NIM (Nomor Induk Siswa)"
+                type="text"
+                placeholder="Masukkan NIM"
+                value={nim}
+                onChange={(e) => setNim(e.target.value)}
+                required={false}
+              />
+            </>
           )}
 
           <Input
