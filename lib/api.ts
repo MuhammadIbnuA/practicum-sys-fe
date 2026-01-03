@@ -304,6 +304,44 @@ class ApiClient {
             method: 'DELETE',
         });
     }
+
+    // Payment
+    async submitPayment(classId: number, proofFileName: string, proofFileData: string) {
+        return this.request('/api/payment/submit', {
+            method: 'POST',
+            body: JSON.stringify({ classId, proofFileName, proofFileData }),
+        });
+    }
+
+    async getPaymentStatus(classId: number) {
+        return this.request<Payment>(`/api/payment/status/${classId}`);
+    }
+
+    async getMyPayments(page: number = 1, limit: number = 50) {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        return this.request<{ data: Payment[]; pagination: any }>(`/api/payment/my-payments?${params}`);
+    }
+
+    async getPendingPayments(page: number = 1, limit: number = 50, status: string = '') {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        if (status) params.append('status', status);
+        return this.request<{ data: Payment[]; pagination: any }>(`/api/admin/payments?${params}`);
+    }
+
+    async verifyPayment(paymentId: number) {
+        return this.request(`/api/admin/payments/${paymentId}/verify`, { method: 'PUT' });
+    }
+
+    async rejectPayment(paymentId: number, reason: string = '') {
+        return this.request(`/api/admin/payments/${paymentId}/reject`, {
+            method: 'PUT',
+            body: JSON.stringify({ reason }),
+        });
+    }
+
+    async getPaymentStats() {
+        return this.request<any>('/api/admin/payments/stats');
+    }
 }
 
 // Types
@@ -456,6 +494,23 @@ export interface RecapData {
     students: RecapStudent[];
     stats: { session_number: number; hadir: number; alpha: number; pending: number; izin: number }[];
     total_students: number;
+}
+
+export interface Payment {
+    id: number;
+    student_id: number;
+    class_id: number;
+    amount: number;
+    proof_file_name: string;
+    proof_file_url: string;
+    status: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'EXPIRED';
+    verified_by_id?: number;
+    verified_at?: string;
+    created_at: string;
+    updated_at: string;
+    student?: { id: number; name: string; email: string; nim?: string };
+    class?: ClassItem;
+    verified_by?: { id: number; name: string };
 }
 
 export const api = new ApiClient();

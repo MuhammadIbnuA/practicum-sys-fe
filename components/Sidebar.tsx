@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 const studentMenus = [
   { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
   { label: 'Jadwal', href: '/schedule', icon: CalendarIcon },
-  { label: 'Enrollment', href: '/enroll', icon: PlusCircleIcon },
+  { label: 'Pembayaran', href: '/payment', icon: CreditCardIcon },
   { label: 'Rekap Saya', href: '/student/my-recap', icon: ChartIcon },
   { label: 'Izin', href: '/student/permissions', icon: DocumentIcon },
 ];
@@ -17,6 +17,7 @@ const adminMenus = [
   { label: 'Jadwal Besar', href: '/admin?tab=schedule', icon: GridIcon },
   { label: 'Kelas', href: '/admin?tab=classes', icon: AcademicIcon },
   { label: 'Manajemen Siswa', href: '/admin/students', icon: UsersIcon },
+  { label: 'Verifikasi Pembayaran', href: '/admin/payments', icon: CreditCardIcon },
   { label: 'Rekap Asisten', href: '/admin/assistant-recap', icon: UsersIcon },
   { label: 'Log Asisten', href: '/admin/assistant-logs', icon: ClipboardIcon },
   { label: 'Perizinan', href: '/admin/permissions', icon: DocumentIcon },
@@ -203,6 +204,14 @@ function LogoutIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+
+function CreditCardIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h.01M11 15h.01M15 15h.01M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
     </svg>
   );
 }
