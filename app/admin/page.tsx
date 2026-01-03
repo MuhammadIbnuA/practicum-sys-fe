@@ -56,19 +56,26 @@ export default function AdminPage() {
         api.getTimeSlots().catch(() => ({ data: [] })),
         api.getRooms().catch(() => ({ data: [] })),
       ]);
-      setSemesters(semRes.data);
-      setCourses(courseRes.data);
-      setTimeSlots(tsRes.data);
-      setRooms(roomRes.data);
+      
+      // Handle paginated responses (data.data) or direct arrays (data)
+      const semData = Array.isArray(semRes.data) ? semRes.data : (semRes.data as { data?: Semester[] })?.data || [];
+      const courseData = Array.isArray(courseRes.data) ? courseRes.data : (courseRes.data as { data?: Course[] })?.data || [];
+      const tsData = Array.isArray(tsRes.data) ? tsRes.data : (tsRes.data as { data?: TimeSlot[] })?.data || [];
+      const roomData = Array.isArray(roomRes.data) ? roomRes.data : (roomRes.data as { data?: Room[] })?.data || [];
+      
+      setSemesters(semData);
+      setCourses(courseData);
+      setTimeSlots(tsData);
+      setRooms(roomData);
 
-      if (semRes.data.length > 0) {
-        const active = semRes.data.find(s => s.is_active) || semRes.data[0];
+      if (semData.length > 0) {
+        const active = semData.find((s: Semester) => s.is_active) || semData[0];
         setActiveSemesterId(active.id);
         setNewClass(c => ({ ...c, semester_id: active.id }));
       }
-      if (courseRes.data.length > 0) setNewClass(c => ({ ...c, course_id: courseRes.data[0].id }));
-      if (tsRes.data.length > 0) setNewClass(c => ({ ...c, time_slot_id: tsRes.data[0].id }));
-      if (roomRes.data.length > 0) setNewClass(c => ({ ...c, room_id: roomRes.data[0].id }));
+      if (courseData.length > 0) setNewClass(c => ({ ...c, course_id: courseData[0].id }));
+      if (tsData.length > 0) setNewClass(c => ({ ...c, time_slot_id: tsData[0].id }));
+      if (roomData.length > 0) setNewClass(c => ({ ...c, room_id: roomData[0].id }));
     } catch (e) { console.error(e); }
     setLoadingData(false);
   };
