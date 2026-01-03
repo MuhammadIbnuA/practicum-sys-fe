@@ -24,7 +24,9 @@ export default function TeachingClassPage() {
     if (user) {
       api.getTeachingSchedule()
         .then(res => {
-          const found = res.data.find(c => c.id === classId);
+          // Handle paginated response
+          const classes = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+          const found = classes.find(c => c.id === classId);
           setCurrentClass(found || null);
         })
         .finally(() => setLoadingData(false));

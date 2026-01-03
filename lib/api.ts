@@ -217,7 +217,7 @@ class ApiClient {
 
     // Teaching
     async getTeachingSchedule() {
-        return this.request<ClassItem[]>('/api/teaching/schedule');
+        return this.request<{ data: ClassItem[]; pagination: any }>('/api/teaching/schedule');
     }
 
     async checkIn(sessionId: number) {

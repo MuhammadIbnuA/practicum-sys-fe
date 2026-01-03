@@ -23,11 +23,14 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       Promise.all([
-        api.getMyClasses().catch(() => ({ data: [] })),
-        api.getTeachingSchedule().catch(() => ({ data: [] }))
+        api.getMyClasses().catch(() => ({ data: { data: [] } })),
+        api.getTeachingSchedule().catch(() => ({ data: { data: [] } }))
       ]).then(([studentRes, teachingRes]) => {
-        setMyClasses(studentRes.data);
-        setTeachingClasses(teachingRes.data);
+        // Handle paginated responses
+        const myClassesData = Array.isArray(studentRes.data) ? studentRes.data : (studentRes.data?.data || []);
+        const teachingClassesData = Array.isArray(teachingRes.data) ? teachingRes.data : (teachingRes.data?.data || []);
+        setMyClasses(myClassesData);
+        setTeachingClasses(teachingClassesData);
         setLoadingData(false);
       });
     }

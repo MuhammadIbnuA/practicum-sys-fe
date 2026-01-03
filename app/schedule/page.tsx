@@ -27,12 +27,13 @@ export default function SchedulePage() {
     if (user) {
       Promise.all([
         api.getMySchedule().catch(() => null),
-        api.getTeachingSchedule().catch(() => ({ data: [] }))
+        api.getTeachingSchedule().catch(() => ({ data: { data: [] } }))
       ]).then(([studentRes, teachingRes]) => {
         const timeSlots = studentRes?.data?.timeSlots || [];
         const dayNames = studentRes?.data?.dayNames || { 1: 'Senin', 2: 'Selasa', 3: 'Rabu', 4: 'Kamis', 5: 'Jumat' };
         const studentSchedule = studentRes?.data?.schedule || {};
-        const teachingClasses = teachingRes?.data || [];
+        // Handle paginated response from getTeachingSchedule
+        const teachingClasses = Array.isArray(teachingRes?.data) ? teachingRes.data : (teachingRes?.data?.data || []);
 
         const schedule: CombinedSchedule['schedule'] = {};
         for (let day = 1; day <= 5; day++) {
