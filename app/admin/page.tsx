@@ -31,7 +31,8 @@ export default function AdminPage() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [schedule, setSchedule] = useState<MasterScheduleData | null>(null);
-  const [activeSemesterId, setActiveSemesterId] = useState<number>(1);
+  const [activeSemesterId, setActiveSemesterId] = useState<number | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
 
   const [newSemester, setNewSemester] = useState('');
   const [newCourse, setNewCourse] = useState({ code: '', name: '' });
@@ -74,8 +75,10 @@ export default function AdminPage() {
 
   const loadSchedule = async () => {
     if (activeSemesterId) {
+      setScheduleLoading(true);
       const res = await api.getMasterSchedule(activeSemesterId).catch(() => null);
       setSchedule(res?.data || null);
+      setScheduleLoading(false);
     }
   };
 
@@ -86,7 +89,7 @@ export default function AdminPage() {
 
   useEffect(() => { if (user?.is_admin) loadData(); }, [user]);
   useEffect(() => {
-    if (activeTab === 'schedule') loadSchedule();
+    if (activeTab === 'schedule' && activeSemesterId) loadSchedule();
     if (activeTab === 'classes') loadClasses();
   }, [activeTab, activeSemesterId]);
 
@@ -351,7 +354,7 @@ export default function AdminPage() {
                       <p className="text-sm text-gray-500">Semester: {schedule?.semester?.name || '-'}</p>
                     </div>
                     <Select
-                      value={String(activeSemesterId)}
+                      value={activeSemesterId ? String(activeSemesterId) : ''}
                       onChange={e => setActiveSemesterId(+e.target.value)}
                       options={semesters.map(s => ({ value: s.id, label: s.name }))}
                       className="w-48"
@@ -359,9 +362,13 @@ export default function AdminPage() {
                   </div>
                 </Card>
 
-                {!schedule || !schedule.rooms || schedule.rooms.length === 0 ? (
+                {scheduleLoading ? (
+                  <LoadingInline />
+                ) : !schedule || !schedule.rooms || schedule.rooms.length === 0 ? (
                   <Card className="text-center py-12">
-                    <p className="text-gray-500">Tidak ada data jadwal untuk semester ini</p>
+                    <p className="text-gray-500">
+                      {!activeSemesterId ? 'Pilih semester untuk melihat jadwal' : 'Tidak ada data jadwal untuk semester ini'}
+                    </p>
                   </Card>
                 ) : schedule.rooms.map((room: Room) => (
                   <div key={room.id} className="mb-8">
