@@ -285,6 +285,25 @@ class ApiClient {
             body: JSON.stringify({ updates }),
         });
     }
+
+    async getStudents(page: number = 1, limit: number = 50, search: string = '') {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        if (search) params.append('search', search);
+        return this.request<{ data: any[]; pagination: any }>(`/api/admin/students?${params}`);
+    }
+
+    async resetStudentPassword(studentId: number, newPassword: string) {
+        return this.request(`/api/admin/students/${studentId}/reset-password`, {
+            method: 'POST',
+            body: JSON.stringify({ newPassword }),
+        });
+    }
+
+    async deleteStudent(studentId: number) {
+        return this.request(`/api/admin/students/${studentId}`, {
+            method: 'DELETE',
+        });
+    }
 }
 
 // Types

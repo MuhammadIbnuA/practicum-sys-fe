@@ -16,6 +16,7 @@ const adminMenus = [
   { label: 'Dashboard', href: '/admin', icon: DashboardIcon },
   { label: 'Jadwal Besar', href: '/admin?tab=schedule', icon: GridIcon },
   { label: 'Kelas', href: '/admin?tab=classes', icon: AcademicIcon },
+  { label: 'Manajemen Siswa', href: '/admin/students', icon: UsersIcon },
   { label: 'Rekap Asisten', href: '/admin/assistant-recap', icon: UsersIcon },
   { label: 'Log Asisten', href: '/admin/assistant-logs', icon: ClipboardIcon },
   { label: 'Perizinan', href: '/admin/permissions', icon: DocumentIcon },
