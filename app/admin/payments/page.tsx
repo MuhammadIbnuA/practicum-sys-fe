@@ -36,7 +36,8 @@ export default function AdminPaymentsPage() {
     setLoadingData(true);
     try {
       const res = await api.getPendingPayments(1, 100, activeTab);
-      const paymentData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      // res.data has structure: { data: [...], pagination: {...} }
+      const paymentData = res.data?.data || [];
       setPayments(paymentData);
     } catch (err) {
       setMessage({ type: 'error', text: 'Gagal memuat pembayaran' });

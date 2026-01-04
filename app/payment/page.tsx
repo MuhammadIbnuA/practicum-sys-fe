@@ -14,6 +14,7 @@ export default function PaymentPage() {
   const router = useRouter();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -32,9 +33,16 @@ export default function PaymentPage() {
         api.getOpenClasses().catch(() => ({ data: [] })),
         api.getMyPayments().catch(() => ({ data: { data: [] } }))
       ]).then(([classRes, paymentRes]) => {
-        setClasses(classRes.data || []);
+        const classData = classRes.data || [];
+        setClasses(classData);
+        
         const paymentData = Array.isArray(paymentRes.data) ? paymentRes.data : (paymentRes.data?.data || []);
-        setPayments(paymentData);
+        setAllPayments(paymentData);
+        
+        // Filter payments to only show those for classes in the active semester
+        const activeClassIds = new Set(classData.map((c: ClassItem) => c.id));
+        const filteredPayments = paymentData.filter((p: Payment) => activeClassIds.has(p.class_id));
+        setPayments(filteredPayments);
         setLoadingData(false);
       });
     }
@@ -72,7 +80,12 @@ export default function PaymentPage() {
       // Refresh payments
       const res = await api.getMyPayments();
       const paymentData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setPayments(paymentData);
+      setAllPayments(paymentData);
+      
+      // Filter to active semester
+      const activeClassIds = new Set(classes.map((c: ClassItem) => c.id));
+      const filteredPayments = paymentData.filter((p: Payment) => activeClassIds.has(p.class_id));
+      setPayments(filteredPayments);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal mengirim bukti transfer' });
     } finally {
@@ -226,6 +239,30 @@ export default function PaymentPage() {
                   </p>
                 </div>
               </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Previous Semester Payments */}
+        {!loadingData && allPayments.length > payments.length && (
+          <div className="mt-12 pt-8 border-t border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Riwayat Pembayaran Semester Lalu</h2>
+            <div className="space-y-3">
+              {allPayments
+                .filter(p => !payments.find(ap => ap.id === p.id))
+                .map((payment) => (
+                  <Card key={payment.id} padding="sm" className="opacity-75">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900">{payment.class?.course?.name || 'Kelas'}</h3>
+                          {getStatusBadge(payment.status)}
+                        </div>
+                        <p className="text-sm text-gray-500">{payment.class?.course?.code || ''} • {payment.class?.name || ''}</p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
             </div>
           </div>
         )}
