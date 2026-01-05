@@ -343,6 +343,56 @@ class ApiClient {
     async getPaymentStats() {
         return this.request<any>('/api/admin/payments/stats');
     }
+
+    // Face Recognition
+    async uploadFaceImages(images: string[]) {
+        return this.request('/api/student/face/upload', {
+            method: 'POST',
+            body: JSON.stringify({ images }),
+        });
+    }
+
+    async saveFaceDescriptors(descriptors: number[][]) {
+        return this.request('/api/student/face/save-descriptors', {
+            method: 'POST',
+            body: JSON.stringify({ descriptors }),
+        });
+    }
+
+    async getFaceStatus() {
+        return this.request<any>('/api/student/face/status');
+    }
+
+    async deleteFaceData() {
+        return this.request('/api/student/face/delete', {
+            method: 'DELETE',
+        });
+    }
+
+    async getSessionFaceDescriptors(sessionId: number) {
+        return this.request<any>(`/api/teaching/session/${sessionId}/face-descriptors`);
+    }
+
+    async markFaceAttendance(sessionId: number, studentId: number, confidenceScore: number, capturedImage: string, deviceInfo?: string) {
+        return this.request('/api/teaching/face/attendance', {
+            method: 'POST',
+            body: JSON.stringify({ sessionId, studentId, confidenceScore, capturedImage, deviceInfo }),
+        });
+    }
+
+    async getFaceStats() {
+        return this.request<any>('/api/admin/face/stats');
+    }
+
+    async getStudentsWithFaceData(page: number = 1, limit: number = 50) {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        return this.request<{ data: any[]; pagination: any }>(`/api/admin/face/students?${params}`);
+    }
+
+    async getFaceAttendanceLogs(page: number = 1, limit: number = 50) {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        return this.request<{ data: any[]; pagination: any }>(`/api/admin/face/logs?${params}`);
+    }
 }
 
 // Types

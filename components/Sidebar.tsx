@@ -8,6 +8,7 @@ const studentMenus = [
   { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
   { label: 'Jadwal', href: '/schedule', icon: CalendarIcon },
   { label: 'Pembayaran', href: '/payment', icon: CreditCardIcon },
+  { label: 'Daftar Wajah', href: '/student/face-registration', icon: FaceIcon },
   { label: 'Rekap Saya', href: '/student/my-recap', icon: ChartIcon },
   { label: 'Izin', href: '/student/permissions', icon: DocumentIcon },
 ];
@@ -212,6 +213,14 @@ function CreditCardIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h.01M11 15h.01M15 15h.01M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+    </svg>
+  );
+}
+
+function FaceIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }
