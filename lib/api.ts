@@ -189,12 +189,13 @@ class ApiClient {
         return this.request<ClassItem[]>('/api/student/classes/open');
     }
 
-    async enrollClass(classId: number) {
-        return this.request('/api/student/enroll', {
-            method: 'POST',
-            body: JSON.stringify({ classId }),
-        });
-    }
+    // DEPRECATED: Direct enrollment is disabled. Use payment system instead.
+    // async enrollClass(classId: number) {
+    //     return this.request('/api/student/enroll', {
+    //         method: 'POST',
+    //         body: JSON.stringify({ classId }),
+    //     });
+    // }
 
     async getMyClasses() {
         return this.request<ClassItem[]>('/api/student/my-classes');

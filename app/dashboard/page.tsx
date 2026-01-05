@@ -104,8 +104,8 @@ export default function DashboardPage() {
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">Kelas Saya</h2>
-                  <Link href="/enroll">
-                    <Button variant="ghost" size="sm">+ Daftar</Button>
+                  <Link href="/payment">
+                    <Button variant="ghost" size="sm">+ Bayar & Daftar</Button>
                   </Link>
                 </div>
 
@@ -114,8 +114,8 @@ export default function DashboardPage() {
                     <EmptyState
                       icon="📚"
                       title="Belum Ada Kelas"
-                      description="Daftar kelas untuk mulai melacak kehadiran"
-                      action={{ label: 'Daftar Kelas', onClick: () => router.push('/enroll') }}
+                      description="Bayar untuk mendaftar kelas praktikum"
+                      action={{ label: 'Bayar & Daftar', onClick: () => router.push('/payment') }}
                     />
                   </Card>
                 ) : (
@@ -166,7 +166,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Aksi Cepat</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <QuickAction href="/schedule" icon={<CalendarIcon />} label="Jadwal" />
-                <QuickAction href="/enroll" icon={<PlusIcon />} label="Enrollment" />
+                <QuickAction href="/payment" icon={<PlusIcon />} label="Bayar & Daftar" />
                 <QuickAction href="/student/my-recap" icon={<ChartIcon />} label="Rekap" />
                 {user.is_admin && (
                   <QuickAction href="/admin" icon={<CogIcon />} label="Admin" />
