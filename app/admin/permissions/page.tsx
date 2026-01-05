@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Avatar, Tabs } from '@/components/ui';
+import FilePreview from '@/components/FilePreview';
 
 interface Permission {
   id: number;
@@ -38,6 +39,7 @@ export default function AdminPermissionsPage() {
   const [filter, setFilter] = useState('PENDING');
   const [processing, setProcessing] = useState<number | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [previewFile, setPreviewFile] = useState<{url: string, name: string} | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/'); return; }
@@ -144,16 +146,19 @@ export default function AdminPermissionsPage() {
                       </div>
 
                       <div className="mt-3 flex items-center gap-4 text-sm">
-                        <a
-                          href={perm.file_data}
-                          download={perm.file_name}
+                        <button
+                          onClick={() => setPreviewFile({
+                            url: perm.file_data,
+                            name: perm.file_name
+                          })}
                           className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                           {perm.file_name}
-                        </a>
+                        </button>
                         <span className="text-gray-400">
                           {new Date(perm.created_at).toLocaleDateString('id-ID')}
                         </span>
@@ -187,6 +192,13 @@ export default function AdminPermissionsPage() {
           </div>
         )}
       </main>
+
+      {/* File Preview */}
+      <FilePreview
+        fileUrl={previewFile?.url || null}
+        fileName={previewFile?.name}
+        onClose={() => setPreviewFile(null)}
+      />
     </div>
   );
 }
