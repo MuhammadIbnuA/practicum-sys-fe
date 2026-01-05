@@ -5,7 +5,8 @@ import { api, Payment } from '@/lib/api';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Modal, Tabs } from '@/components/ui';
+import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Tabs } from '@/components/ui';
+import FilePreview from '@/components/FilePreview';
 
 const PAYMENT_AMOUNT = 5000;
 
@@ -16,7 +17,7 @@ export default function AdminPaymentsPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [activeTab, setActiveTab] = useState('PENDING');
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [showProofModal, setShowProofModal] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{url: string, name: string} | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -52,7 +53,7 @@ export default function AdminPaymentsPage() {
     try {
       await api.verifyPayment(paymentId);
       setMessage({ type: 'success', text: 'Pembayaran terverifikasi. Siswa berhasil terdaftar.' });
-      setShowProofModal(false);
+      setPreviewFile(null);
       setSelectedPayment(null);
       await loadPayments();
     } catch (err) {
@@ -68,7 +69,7 @@ export default function AdminPaymentsPage() {
     try {
       await api.rejectPayment(paymentId);
       setMessage({ type: 'success', text: 'Pembayaran ditolak.' });
-      setShowProofModal(false);
+      setPreviewFile(null);
       setSelectedPayment(null);
       await loadPayments();
     } catch (err) {
@@ -184,7 +185,10 @@ export default function AdminPaymentsPage() {
                     <Button
                       onClick={() => {
                         setSelectedPayment(payment);
-                        setShowProofModal(true);
+                        setPreviewFile({
+                          url: payment.proof_file_url,
+                          name: payment.proof_file_name
+                        });
                       }}
                       variant="outline"
                       size="sm"
@@ -217,72 +221,15 @@ export default function AdminPaymentsPage() {
         )}
       </main>
 
-      {/* Proof Modal */}
-      <Modal
-        isOpen={showProofModal}
+      {/* File Preview */}
+      <FilePreview
+        fileUrl={previewFile?.url || null}
+        fileName={previewFile?.name}
         onClose={() => {
-          setShowProofModal(false);
+          setPreviewFile(null);
           setSelectedPayment(null);
         }}
-        title="Bukti Transfer"
-      >
-        {selectedPayment && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600">
-                <strong>{selectedPayment.student?.name}</strong> - {selectedPayment.class?.course.name}
-              </p>
-              <p className="text-lg font-bold text-indigo-600 mt-1">
-                IDR {selectedPayment.amount.toLocaleString()}
-              </p>
-            </div>
-
-            {selectedPayment.proof_file_url && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                {selectedPayment.proof_file_url.startsWith('data:image') ? (
-                  <img
-                    src={selectedPayment.proof_file_url}
-                    alt="Bukti transfer"
-                    className="w-full h-auto max-h-96 object-contain"
-                  />
-                ) : (
-                  <div className="p-4 text-center">
-                    <p className="text-gray-600">File PDF tidak dapat ditampilkan di sini</p>
-                    <a
-                      href={selectedPayment.proof_file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-indigo-600 hover:text-indigo-700 font-medium mt-2 inline-block"
-                    >
-                      Buka File
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {selectedPayment.status === 'PENDING' && (
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => handleReject(selectedPayment.id)}
-                  variant="danger"
-                  fullWidth
-                  loading={verifying}
-                >
-                  Tolak
-                </Button>
-                <Button
-                  onClick={() => handleVerify(selectedPayment.id)}
-                  fullWidth
-                  loading={verifying}
-                >
-                  Verifikasi
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+      />
     </div>
   );
 }

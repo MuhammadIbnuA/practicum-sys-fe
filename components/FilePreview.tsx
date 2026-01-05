@@ -14,12 +14,36 @@ export default function FilePreview({ fileUrl, fileName, onClose }: FilePreviewP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fileType, setFileType] = useState<'image' | 'pdf' | 'unknown'>('unknown');
+  const [displayName, setDisplayName] = useState<string>('');
 
   useEffect(() => {
     if (!fileUrl) {
       setLoading(false);
       return;
     }
+
+    // Extract filename from URL if not provided
+    let name = fileName;
+    if (!name && fileUrl) {
+      if (fileUrl.startsWith('http')) {
+        // Extract from MinIO URL
+        const urlParts = fileUrl.split('/');
+        name = urlParts[urlParts.length - 1].split('?')[0];
+        // Decode URL encoding
+        name = decodeURIComponent(name);
+      } else if (fileUrl.startsWith('data:')) {
+        // For base64, use generic name based on type
+        if (fileUrl.startsWith('data:image/')) {
+          const mimeType = fileUrl.match(/data:image\/([^;]+)/)?.[1] || 'jpg';
+          name = `Gambar.${mimeType}`;
+        } else if (fileUrl.startsWith('data:application/pdf')) {
+          name = 'Dokumen.pdf';
+        } else {
+          name = 'File';
+        }
+      }
+    }
+    setDisplayName(name || 'File');
 
     // Determine file type
     if (fileUrl.startsWith('data:image/') || fileUrl.match(/\.(jpg|jpeg|png|gif)(\?|$)/i)) {
@@ -31,14 +55,14 @@ export default function FilePreview({ fileUrl, fileName, onClose }: FilePreviewP
     }
 
     setLoading(false);
-  }, [fileUrl]);
+  }, [fileUrl, fileName]);
 
   if (!fileUrl) {
     return null;
   }
 
   return (
-    <Modal isOpen={!!fileUrl} onClose={onClose} title={fileName || 'Preview File'}>
+    <Modal isOpen={!!fileUrl} onClose={onClose} title={displayName}>
       <div className="w-full max-w-4xl">
         {loading && (
           <div className="flex justify-center items-center py-12">
@@ -58,7 +82,7 @@ export default function FilePreview({ fileUrl, fileName, onClose }: FilePreviewP
               <div className="relative w-full">
                 <img
                   src={fileUrl}
-                  alt={fileName || 'Preview'}
+                  alt={displayName}
                   className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
                   onError={() => setError('Gagal memuat gambar')}
                 />
@@ -70,7 +94,7 @@ export default function FilePreview({ fileUrl, fileName, onClose }: FilePreviewP
                 <iframe
                   src={fileUrl}
                   className="w-full h-full border-0 rounded-lg"
-                  title={fileName || 'PDF Preview'}
+                  title={displayName}
                   onError={() => setError('Gagal memuat PDF')}
                 />
               </div>
@@ -84,7 +108,7 @@ export default function FilePreview({ fileUrl, fileName, onClose }: FilePreviewP
                 <p className="text-gray-600 mb-4">Preview tidak tersedia untuk tipe file ini</p>
                 <a
                   href={fileUrl}
-                  download={fileName}
+                  download={displayName}
                   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,14 +122,14 @@ export default function FilePreview({ fileUrl, fileName, onClose }: FilePreviewP
         )}
 
         <div className="mt-4 flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            {fileName && <span className="font-medium">{fileName}</span>}
+          <div className="text-sm text-gray-500 truncate max-w-md">
+            <span className="font-medium">{displayName}</span>
           </div>
           <div className="flex gap-2">
             {(fileType === 'image' || fileType === 'pdf') && (
               <a
                 href={fileUrl}
-                download={fileName}
+                download={displayName}
                 className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Download
