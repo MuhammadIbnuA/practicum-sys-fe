@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Tabs } from '@/components/ui';
-import FilePreview from '@/components/FilePreview';
+import EnhancedFilePreview from '@/components/EnhancedFilePreview';
 
 const PAYMENT_AMOUNT = 5000;
 
@@ -222,14 +222,17 @@ export default function AdminPaymentsPage() {
       </main>
 
       {/* File Preview */}
-      <FilePreview
-        fileUrl={previewFile?.url || null}
-        fileName={previewFile?.name}
-        onClose={() => {
-          setPreviewFile(null);
-          setSelectedPayment(null);
-        }}
-      />
+      {previewFile && (
+        <EnhancedFilePreview
+          fileUrl={previewFile.url}
+          fileName={previewFile.name}
+          isOpen={!!previewFile}
+          onClose={() => {
+            setPreviewFile(null);
+            setSelectedPayment(null);
+          }}
+        />
+      )}
     </div>
   );
 }

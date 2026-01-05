@@ -287,9 +287,11 @@ class ApiClient {
         });
     }
 
-    async getStudents(page: number = 1, limit: number = 50, search: string = '') {
+    async getStudents(page: number = 1, limit: number = 50, search: string = '', theoryClass: string = '', practicumClass: string = '') {
         const params = new URLSearchParams({ page: String(page), limit: String(limit) });
         if (search) params.append('search', search);
+        if (theoryClass) params.append('theoryClass', theoryClass);
+        if (practicumClass) params.append('practicumClass', practicumClass);
         return this.request<{ data: any[]; pagination: any }>(`/api/admin/students?${params}`);
     }
 
@@ -307,10 +309,10 @@ class ApiClient {
     }
 
     // Payment
-    async submitPayment(classId: number, proofFileName: string, proofFileData: string) {
+    async submitPayment(classId: number, theoryClass: string, proofFileName: string, proofFileData: string) {
         return this.request('/api/payment/submit', {
             method: 'POST',
-            body: JSON.stringify({ classId, proofFileName, proofFileData }),
+            body: JSON.stringify({ classId, theoryClass, proofFileName, proofFileData }),
         });
     }
 
@@ -392,6 +394,68 @@ class ApiClient {
     async getFaceAttendanceLogs(page: number = 1, limit: number = 50) {
         const params = new URLSearchParams({ page: String(page), limit: String(limit) });
         return this.request<{ data: any[]; pagination: any }>(`/api/admin/face/logs?${params}`);
+    }
+
+    // Grades
+    async getClassGrades(classId: number) {
+        return this.request<any>(`/api/grades/class/${classId}`);
+    }
+
+    async getSessionGrades(sessionId: number) {
+        return this.request<any>(`/api/grades/session/${sessionId}`);
+    }
+
+    async updateGrade(studentId: number, sessionId: number, grade: number) {
+        return this.request('/api/grades/update', {
+            method: 'PUT',
+            body: JSON.stringify({ studentId, sessionId, grade }),
+        });
+    }
+
+    async updateSessionGrades(sessionId: number, grades: { studentId: number; grade: number }[]) {
+        return this.request(`/api/grades/session/${sessionId}/batch`, {
+            method: 'PUT',
+            body: JSON.stringify({ grades }),
+        });
+    }
+
+    async getClassGradeStats(classId: number) {
+        return this.request<any>(`/api/grades/class/${classId}/stats`);
+    }
+
+    // INHAL (Repraktikum)
+    async submitInhalPayment(sessionId: number, proofFileName: string, proofFileData: string) {
+        return this.request('/api/inhal/student/submit', {
+            method: 'POST',
+            body: JSON.stringify({ sessionId, proofFileName, proofFileData }),
+        });
+    }
+
+    async getMyInhalPayments(page: number = 1, limit: number = 50) {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        return this.request<{ data: any[]; pagination: any }>(`/api/inhal/student/my-payments?${params}`);
+    }
+
+    async getInhalPaymentStatus(sessionId: number) {
+        return this.request<any>(`/api/inhal/student/status/${sessionId}`);
+    }
+
+    async getAllInhalPayments(page: number = 1, limit: number = 50, status: string = '') {
+        const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+        if (status) params.append('status', status);
+        return this.request<{ data: any[]; pagination: any }>(`/api/inhal/admin/payments?${params}`);
+    }
+
+    async verifyInhalPayment(paymentId: number) {
+        return this.request(`/api/inhal/admin/payments/${paymentId}/verify`, { method: 'PUT' });
+    }
+
+    async rejectInhalPayment(paymentId: number) {
+        return this.request(`/api/inhal/admin/payments/${paymentId}/reject`, { method: 'PUT' });
+    }
+
+    async getInhalStats() {
+        return this.request<any>('/api/inhal/admin/stats');
     }
 }
 

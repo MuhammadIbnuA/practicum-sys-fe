@@ -56,9 +56,14 @@ export default function TeachingClassPage() {
                 {currentClass?.name} • {currentClass?.student_count || 0} mahasiswa
               </p>
             </div>
-            <Link href={`/recap/${classId}`}>
-              <Button variant="primary" size="sm">Rekap Absensi</Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href={`/teaching/class/${classId}/grades`}>
+                <Button variant="secondary" size="sm">Input Nilai</Button>
+              </Link>
+              <Link href={`/recap/${classId}`}>
+                <Button variant="primary" size="sm">Rekap Absensi</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>

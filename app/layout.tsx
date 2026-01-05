@@ -4,8 +4,8 @@ import { AuthProvider } from "@/lib/auth";
 import AppLayout from "@/components/AppLayout";
 
 export const metadata: Metadata = {
-  title: "Practicum System",
-  description: "University Practicum Attendance Management System",
+  title: "Apollo Attendance System",
+  description: "Apollo - University Practicum Attendance Management System",
 };
 
 export default function RootLayout({

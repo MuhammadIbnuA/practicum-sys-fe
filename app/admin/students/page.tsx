@@ -9,8 +9,11 @@ import { Card, Badge, Button, Alert, Input, Modal, LoadingInline } from '@/compo
 export default function StudentsPage() {
   const { user, loading } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [search, setSearch] = useState('');
+  const [theoryClassFilter, setTheoryClassFilter] = useState('');
+  const [practicumClassFilter, setPracticumClassFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -34,13 +37,23 @@ export default function StudentsPage() {
   useEffect(() => {
     if (user?.is_admin) {
       loadStudents();
+      loadClasses();
     }
-  }, [user, page, search]);
+  }, [user, page, search, theoryClassFilter, practicumClassFilter]);
+
+  const loadClasses = async () => {
+    try {
+      const res = await api.getOpenClasses();
+      setClasses(res.data || []);
+    } catch (err) {
+      console.error('Failed to load classes:', err);
+    }
+  };
 
   const loadStudents = async () => {
     try {
       setLoadingData(true);
-      const res = await api.getStudents(page, limit, search);
+      const res = await api.getStudents(page, limit, search, theoryClassFilter, practicumClassFilter);
       setStudents(res.data.data);
       setTotal(res.data.pagination.total);
     } catch (err) {
@@ -120,17 +133,64 @@ export default function StudentsPage() {
           </Alert>
         )}
 
-        {/* Search */}
+        {/* Search and Filters */}
         <Card className="mb-6" padding="sm">
-          <Input
-            placeholder="Cari berdasarkan nama, email, atau NIM..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            icon={<SearchIcon />}
-          />
+          <div className="space-y-3">
+            <Input
+              placeholder="Cari berdasarkan nama, email, atau NIM..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              icon={<SearchIcon />}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kelas Teori</label>
+                <Input
+                  placeholder="Contoh: A, B, C"
+                  value={theoryClassFilter}
+                  onChange={(e) => {
+                    setTheoryClassFilter(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kelas Praktikum</label>
+                <select
+                  value={practicumClassFilter}
+                  onChange={(e) => {
+                    setPracticumClassFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">Semua Kelas</option>
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.course.code} - {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {(search || theoryClassFilter || practicumClassFilter) && (
+              <Button
+                onClick={() => {
+                  setSearch('');
+                  setTheoryClassFilter('');
+                  setPracticumClassFilter('');
+                  setPage(1);
+                }}
+                variant="ghost"
+                size="sm"
+              >
+                Reset Filter
+              </Button>
+            )}
+          </div>
         </Card>
 
         {/* Students List */}
@@ -154,6 +214,22 @@ export default function StudentsPage() {
                         <span>{student._count.enrollments} kelas</span>
                         <span>Terdaftar: {new Date(student.created_at).toLocaleDateString('id-ID')}</span>
                       </div>
+                      {student.enrollments && student.enrollments.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {student.enrollments.map((enrollment: any, idx: number) => (
+                            <div key={idx} className="text-xs text-gray-600 flex items-center gap-2">
+                              <Badge variant="secondary" size="sm">
+                                {enrollment.class.course.code} - {enrollment.class.name}
+                              </Badge>
+                              {enrollment.theory_class && (
+                                <span className="text-indigo-600 font-medium">
+                                  Teori: {enrollment.theory_class}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button

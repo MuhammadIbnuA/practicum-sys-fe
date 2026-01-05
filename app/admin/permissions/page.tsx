@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Avatar, Tabs } from '@/components/ui';
-import FilePreview from '@/components/FilePreview';
+import EnhancedFilePreview from '@/components/EnhancedFilePreview';
 
 interface Permission {
   id: number;
@@ -194,11 +194,14 @@ export default function AdminPermissionsPage() {
       </main>
 
       {/* File Preview */}
-      <FilePreview
-        fileUrl={previewFile?.url || null}
-        fileName={previewFile?.name}
-        onClose={() => setPreviewFile(null)}
-      />
+      {previewFile && (
+        <EnhancedFilePreview
+          fileUrl={previewFile.url}
+          fileName={previewFile.name}
+          isOpen={!!previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </div>
   );
 }

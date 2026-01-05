@@ -64,7 +64,7 @@ export default function Badge({
 export function StatusBadge({ 
   status 
 }: { 
-  status: 'HADIR' | 'ALPHA' | 'PENDING' | 'IZIN_SAKIT' | 'IZIN_LAIN' | 'IZIN_KAMPUS' | 'REJECTED' | string 
+  status: 'HADIR' | 'ALPHA' | 'PENDING' | 'IZIN_SAKIT' | 'IZIN_LAIN' | 'IZIN_KAMPUS' | 'REJECTED' | 'INHAL' | string 
 }) {
   const config: Record<string, { variant: BadgeProps['variant']; label: string; dot?: boolean }> = {
     HADIR: { variant: 'success', label: 'Hadir', dot: true },
@@ -75,6 +75,7 @@ export function StatusBadge({
     IZIN_KAMPUS: { variant: 'info', label: 'Izin Kampus' },
     REJECTED: { variant: 'danger', label: 'Ditolak' },
     APPROVED: { variant: 'success', label: 'Disetujui' },
+    INHAL: { variant: 'primary', label: 'INHAL', dot: true },
   };
 
   const { variant, label, dot } = config[status] || { variant: 'default', label: status };

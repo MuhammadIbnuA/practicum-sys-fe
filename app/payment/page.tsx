@@ -20,6 +20,7 @@ export default function PaymentPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [fileName, setFileName] = useState('');
   const [fileData, setFileData] = useState('');
+  const [theoryClass, setTheoryClass] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
@@ -71,8 +72,8 @@ export default function PaymentPage() {
   };
 
   const handleSubmitPayment = async () => {
-    if (selectedClasses.length === 0 || !fileName || !fileData) {
-      setMessage({ type: 'error', text: 'Silakan pilih kelas dan file bukti transfer' });
+    if (selectedClasses.length === 0 || !fileName || !fileData || !theoryClass) {
+      setMessage({ type: 'error', text: 'Silakan pilih kelas, isi kelas teori, dan upload bukti transfer' });
       return;
     }
 
@@ -88,7 +89,7 @@ export default function PaymentPage() {
       // Submit payment for each selected class
       for (const classId of selectedClasses) {
         try {
-          await api.submitPayment(classId, fileName, fileData);
+          await api.submitPayment(classId, theoryClass, fileName, fileData);
           results.success.push(classId);
         } catch (err) {
           results.failed.push({
@@ -115,6 +116,7 @@ export default function PaymentPage() {
       setShowPaymentModal(false);
       setFileName('');
       setFileData('');
+      setTheoryClass('');
       setSelectedClasses([]);
       setBulkMode(false);
       
@@ -365,6 +367,7 @@ export default function PaymentPage() {
           setShowPaymentModal(false);
           setFileName('');
           setFileData('');
+          setTheoryClass('');
           if (!bulkMode) setSelectedClasses([]);
         }}
         title="Upload Bukti Transfer"
@@ -411,6 +414,23 @@ export default function PaymentPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
+              Kelas Teori *
+            </label>
+            <input
+              type="text"
+              placeholder="Contoh: A, B, C, D"
+              value={theoryClass}
+              onChange={(e) => setTheoryClass(e.target.value.toUpperCase())}
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              maxLength={10}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Masukkan kelas teori Anda (berbeda dengan kelas praktikum)
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Bukti Transfer (PDF/JPG/PNG)
             </label>
             <input
@@ -445,6 +465,7 @@ export default function PaymentPage() {
                 setShowPaymentModal(false);
                 setFileName('');
                 setFileData('');
+                setTheoryClass('');
                 if (!bulkMode) setSelectedClasses([]);
               }}
               variant="outline"

@@ -216,8 +216,8 @@ function ClassCard({ cls, href, showStudentCount }: {
   showStudentCount?: boolean;
 }) {
   return (
-    <Link href={href}>
-      <Card hover padding="sm">
+    <Card hover padding="sm">
+      <Link href={href}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 truncate">{cls.course.name}</h3>
@@ -234,8 +234,24 @@ function ClassCard({ cls, href, showStudentCount }: {
           </span>
           <span>{cls.time_slot?.label || ''}</span>
         </div>
-      </Card>
-    </Link>
+      </Link>
+      
+      {/* Action buttons for teaching classes */}
+      {showStudentCount && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+          <Link href={`/teaching/class/${cls.id}/grades`} className="flex-1">
+            <Button variant="secondary" size="sm" fullWidth>
+              📝 Input Nilai
+            </Button>
+          </Link>
+          <Link href={`/recap/${cls.id}`} className="flex-1">
+            <Button variant="secondary" size="sm" fullWidth>
+              📊 Rekap
+            </Button>
+          </Link>
+        </div>
+      )}
+    </Card>
   );
 }
 

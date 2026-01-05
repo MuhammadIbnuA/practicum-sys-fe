@@ -8,6 +8,7 @@ const studentMenus = [
   { label: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
   { label: 'Jadwal', href: '/schedule', icon: CalendarIcon },
   { label: 'Pembayaran', href: '/payment', icon: CreditCardIcon },
+  { label: 'INHAL', href: '/student/inhal', icon: RepeatIcon },
   { label: 'Daftar Wajah', href: '/student/face-registration', icon: FaceIcon },
   { label: 'Rekap Saya', href: '/student/my-recap', icon: ChartIcon },
   { label: 'Izin', href: '/student/permissions', icon: DocumentIcon },
@@ -18,7 +19,9 @@ const adminMenus = [
   { label: 'Jadwal Besar', href: '/admin?tab=schedule', icon: GridIcon },
   { label: 'Kelas', href: '/admin?tab=classes', icon: AcademicIcon },
   { label: 'Manajemen Siswa', href: '/admin/students', icon: UsersIcon },
+  { label: 'Input Nilai', href: '/admin/grades', icon: ChartIcon },
   { label: 'Verifikasi Pembayaran', href: '/admin/payments', icon: CreditCardIcon },
+  { label: 'Verifikasi INHAL', href: '/admin/inhal', icon: RepeatIcon },
   { label: 'Rekap Asisten', href: '/admin/assistant-recap', icon: UsersIcon },
   { label: 'Log Asisten', href: '/admin/assistant-logs', icon: ClipboardIcon },
   { label: 'Perizinan', href: '/admin/permissions', icon: DocumentIcon },
@@ -50,7 +53,7 @@ export default function Sidebar() {
           </svg>
         </div>
         <div>
-          <h1 className="font-bold text-gray-900">Praktikum</h1>
+          <h1 className="font-bold text-gray-900">Apollo</h1>
           <p className="text-xs text-gray-500">Attendance System</p>
         </div>
       </div>
@@ -221,6 +224,14 @@ function FaceIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function RepeatIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
     </svg>
   );
 }
