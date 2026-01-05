@@ -5,7 +5,7 @@ import { api, ClassItem, Payment } from '@/lib/api';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Modal, Input } from '@/components/ui';
+import { Card, Badge, Button, Alert, EmptyState, LoadingInline, Modal } from '@/components/ui';
 
 const PAYMENT_AMOUNT = 5000;
 
@@ -16,12 +16,13 @@ export default function PaymentPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [fileName, setFileName] = useState('');
   const [fileData, setFileData] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push('/');
@@ -61,21 +62,61 @@ export default function PaymentPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleToggleClass = (classId: number) => {
+    setSelectedClasses(prev => 
+      prev.includes(classId) 
+        ? prev.filter(id => id !== classId)
+        : [...prev, classId]
+    );
+  };
+
   const handleSubmitPayment = async () => {
-    if (!selectedClass || !fileName || !fileData) {
-      setMessage({ type: 'error', text: 'Silakan pilih file bukti transfer' });
+    if (selectedClasses.length === 0 || !fileName || !fileData) {
+      setMessage({ type: 'error', text: 'Silakan pilih kelas dan file bukti transfer' });
       return;
     }
 
     setSubmitting(true);
     setMessage(null);
+    
+    const results = {
+      success: [] as number[],
+      failed: [] as { classId: number; error: string }[]
+    };
+
     try {
-      await api.submitPayment(selectedClass.id, fileName, fileData);
-      setMessage({ type: 'success', text: 'Bukti transfer berhasil dikirim. Menunggu verifikasi admin.' });
+      // Submit payment for each selected class
+      for (const classId of selectedClasses) {
+        try {
+          await api.submitPayment(classId, fileName, fileData);
+          results.success.push(classId);
+        } catch (err) {
+          results.failed.push({
+            classId,
+            error: err instanceof Error ? err.message : 'Gagal mengirim'
+          });
+        }
+      }
+
+      // Show results
+      if (results.success.length > 0) {
+        const successMsg = `Berhasil mengirim ${results.success.length} pembayaran. Menunggu verifikasi admin.`;
+        const failMsg = results.failed.length > 0 
+          ? ` ${results.failed.length} pembayaran gagal.`
+          : '';
+        setMessage({ 
+          type: results.failed.length === 0 ? 'success' : 'error', 
+          text: successMsg + failMsg 
+        });
+      } else {
+        setMessage({ type: 'error', text: 'Semua pembayaran gagal dikirim' });
+      }
+
       setShowPaymentModal(false);
       setFileName('');
       setFileData('');
-      setSelectedClass(null);
+      setSelectedClasses([]);
+      setBulkMode(false);
       
       // Refresh payments
       const res = await api.getMyPayments();
@@ -87,7 +128,7 @@ export default function PaymentPage() {
       const filteredPayments = paymentData.filter((p: Payment) => activeClassIds.has(p.class_id));
       setPayments(filteredPayments);
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal mengirim bukti transfer' });
+      setMessage({ type: 'error', text: 'Terjadi kesalahan saat mengirim pembayaran' });
     } finally {
       setSubmitting(false);
     }
@@ -124,9 +165,21 @@ export default function PaymentPage() {
               <h1 className="text-2xl font-bold text-gray-900">Pembayaran Kelas</h1>
               <p className="text-gray-500 mt-1">Bayar untuk mendaftar kelas praktikum (IDR {PAYMENT_AMOUNT.toLocaleString()})</p>
             </div>
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm">← Kembali</Button>
-            </Link>
+            <div className="flex gap-2">
+              <Button 
+                variant={bulkMode ? 'primary' : 'outline'} 
+                size="sm"
+                onClick={() => {
+                  setBulkMode(!bulkMode);
+                  setSelectedClasses([]);
+                }}
+              >
+                {bulkMode ? '✓ Mode Bulk' : 'Mode Bulk'}
+              </Button>
+              <Link href="/dashboard">
+                <Button variant="outline" size="sm">← Kembali</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -144,7 +197,18 @@ export default function PaymentPage() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Available Classes */}
             <div className="lg:col-span-2">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Kelas Tersedia</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Kelas Tersedia</h2>
+                {bulkMode && selectedClasses.length > 0 && (
+                  <Button
+                    onClick={() => setShowPaymentModal(true)}
+                    variant="primary"
+                    size="sm"
+                  >
+                    Bayar {selectedClasses.length} Kelas (IDR {(PAYMENT_AMOUNT * selectedClasses.length).toLocaleString()})
+                  </Button>
+                )}
+              </div>
               {classes.length === 0 ? (
                 <Card>
                   <EmptyState
@@ -158,10 +222,34 @@ export default function PaymentPage() {
                   {classes.map((cls) => {
                     const payment = getPaymentStatus(cls.id);
                     const isVerified = payment?.status === 'VERIFIED';
+                    const isSelected = selectedClasses.includes(cls.id);
+                    const canSelect = !isVerified && cls.is_available;
                     
                     return (
-                      <Card key={cls.id} padding="sm" className={isVerified ? 'opacity-60' : ''}>
-                        <div className="flex items-start justify-between gap-4">
+                      <Card 
+                        key={cls.id} 
+                        padding="sm" 
+                        className={`${isVerified ? 'opacity-60' : ''} ${isSelected ? 'ring-2 ring-indigo-500' : ''}`}
+                      >
+                        <div 
+                          className={`flex items-start justify-between gap-4 ${bulkMode && canSelect ? 'cursor-pointer' : ''}`}
+                          onClick={() => {
+                            if (bulkMode && canSelect) {
+                              handleToggleClass(cls.id);
+                            }
+                          }}
+                        >
+                          {bulkMode && canSelect && (
+                            <div className="flex items-center pt-1">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleClass(cls.id)}
+                                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          )}
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-semibold text-gray-900">{cls.course.name}</h3>
@@ -183,17 +271,19 @@ export default function PaymentPage() {
                               </div>
                             </div>
                           </div>
-                          <Button
-                            onClick={() => {
-                              setSelectedClass(cls);
-                              setShowPaymentModal(true);
-                            }}
-                            disabled={isVerified || !cls.is_available}
-                            variant={isVerified ? 'secondary' : 'primary'}
-                            size="sm"
-                          >
-                            {isVerified ? 'Terdaftar' : payment ? 'Kirim Ulang' : 'Bayar'}
-                          </Button>
+                          {!bulkMode && (
+                            <Button
+                              onClick={() => {
+                                setSelectedClasses([cls.id]);
+                                setShowPaymentModal(true);
+                              }}
+                              disabled={isVerified || !cls.is_available}
+                              variant={isVerified ? 'secondary' : 'primary'}
+                              size="sm"
+                            >
+                              {isVerified ? 'Terdaftar' : payment ? 'Kirim Ulang' : 'Bayar'}
+                            </Button>
+                          )}
                         </div>
                       </Card>
                     );
@@ -275,20 +365,49 @@ export default function PaymentPage() {
           setShowPaymentModal(false);
           setFileName('');
           setFileData('');
+          if (!bulkMode) setSelectedClasses([]);
         }}
         title="Upload Bukti Transfer"
       >
         <div className="space-y-4">
-          {selectedClass && (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600">
-                <strong>{selectedClass.course.name}</strong> - {selectedClass.name}
-              </p>
-              <p className="text-lg font-bold text-indigo-600 mt-1">
-                IDR {PAYMENT_AMOUNT.toLocaleString()}
-              </p>
-            </div>
-          )}
+          <div className="bg-gray-50 p-3 rounded-lg">
+            {selectedClasses.length === 1 ? (
+              <>
+                {(() => {
+                  const cls = classes.find(c => c.id === selectedClasses[0]);
+                  return cls ? (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        <strong>{cls.course.name}</strong> - {cls.name}
+                      </p>
+                      <p className="text-lg font-bold text-indigo-600 mt-1">
+                        IDR {PAYMENT_AMOUNT.toLocaleString()}
+                      </p>
+                    </>
+                  ) : null;
+                })()}
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>{selectedClasses.length} Kelas Dipilih:</strong>
+                </p>
+                <div className="space-y-1 mb-2 max-h-32 overflow-y-auto">
+                  {selectedClasses.map(classId => {
+                    const cls = classes.find(c => c.id === classId);
+                    return cls ? (
+                      <p key={classId} className="text-xs text-gray-600">
+                        • {cls.course.name} - {cls.name}
+                      </p>
+                    ) : null;
+                  })}
+                </div>
+                <p className="text-lg font-bold text-indigo-600">
+                  Total: IDR {(PAYMENT_AMOUNT * selectedClasses.length).toLocaleString()}
+                </p>
+              </>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -312,12 +431,21 @@ export default function PaymentPage() {
             )}
           </div>
 
+          {selectedClasses.length > 1 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900">
+                <strong>Catatan:</strong> Bukti transfer yang sama akan digunakan untuk semua kelas. Admin akan memverifikasi setiap kelas secara terpisah.
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-3">
             <Button
               onClick={() => {
                 setShowPaymentModal(false);
                 setFileName('');
                 setFileData('');
+                if (!bulkMode) setSelectedClasses([]);
               }}
               variant="outline"
               fullWidth
@@ -330,7 +458,7 @@ export default function PaymentPage() {
               disabled={!fileName}
               fullWidth
             >
-              Kirim Bukti
+              {submitting ? 'Mengirim...' : `Kirim Bukti (${selectedClasses.length} Kelas)`}
             </Button>
           </div>
         </div>
