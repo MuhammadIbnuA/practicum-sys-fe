@@ -5,7 +5,7 @@ import { api, Semester, Course, ClassItem, TimeSlot, Room, MasterScheduleData } 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, Badge, Button, Input, Select, Alert, Tabs, LoadingInline } from '@/components/ui';
+import { Card, Badge, Button, Input, Select, Alert, Tabs, LoadingInline, Modal } from '@/components/ui';
 
 type Tab = 'schedule' | 'semesters' | 'courses' | 'classes';
 
@@ -41,6 +41,13 @@ export default function AdminPage() {
     day_of_week: 1, time_slot_id: 0, room_id: 0,
   });
   const [submitting, setSubmitting] = useState(false);
+  
+  // Assistant management
+  const [showAssistantModal, setShowAssistantModal] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number>(0);
+  const [assigningAssistant, setAssigningAssistant] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push('/');
@@ -154,6 +161,47 @@ export default function AdminPage() {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal' });
     }
     setSubmitting(false);
+  };
+
+  const handleOpenAssistantModal = async (classItem: ClassItem) => {
+    setSelectedClass(classItem);
+    setShowAssistantModal(true);
+    // Load available users (students who can be assistants)
+    try {
+      const res = await api.getStudents(1, 100, '');
+      setAvailableUsers(res.data.data || []);
+      if (res.data.data && res.data.data.length > 0) {
+        setSelectedUserId(res.data.data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  };
+
+  const handleAssignAssistant = async () => {
+    if (!selectedClass || !selectedUserId) return;
+    setAssigningAssistant(true);
+    try {
+      await api.assignAssistant(selectedClass.id, selectedUserId);
+      setMessage({ type: 'success', text: 'Asisten berhasil ditambahkan!' });
+      setShowAssistantModal(false);
+      loadClasses();
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal menambahkan asisten' });
+    } finally {
+      setAssigningAssistant(false);
+    }
+  };
+
+  const handleRemoveAssistant = async (classId: number, userId: number) => {
+    if (!confirm('Hapus asisten dari kelas ini?')) return;
+    try {
+      await api.removeAssistant(classId, userId);
+      setMessage({ type: 'success', text: 'Asisten berhasil dihapus!' });
+      loadClasses();
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Gagal menghapus asisten' });
+    }
   };
 
   if (loading || !user || !user.is_admin) {
@@ -328,22 +376,46 @@ export default function AdminPage() {
                     {classes.map(c => (
                       <div key={c.id} className="px-5 py-4 hover:bg-gray-50">
                         <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-mono text-indigo-600 text-sm">{c.course?.code}</span>
-                            <span className="ml-2 font-medium text-gray-900">{c.name}</span>
-                            <span className="ml-3 text-sm text-gray-500">
-                              {dayNames[c.day_of_week || 1]} • {c.time_slot?.label} • {c.room?.code}
-                            </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-indigo-600 text-sm">{c.course?.code}</span>
+                              <span className="font-medium text-gray-900">{c.name}</span>
+                              <span className="text-sm text-gray-500">
+                                {dayNames[c.day_of_week || 1]} • {c.time_slot?.label} • {c.room?.code}
+                              </span>
+                            </div>
+                            {c.assistants && c.assistants.length > 0 ? (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {c.assistants.map(a => (
+                                  <div key={a.user?.id} className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs">
+                                    <span>{a.user?.name}</span>
+                                    <button
+                                      onClick={() => handleRemoveAssistant(c.id, a.user?.id || 0)}
+                                      className="ml-1 hover:text-indigo-900"
+                                      title="Hapus asisten"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 mt-1">Belum ada asisten</p>
+                            )}
                           </div>
-                          <Link href={`/recap/${c.id}`}>
-                            <Button variant="ghost" size="xs">Rekap</Button>
-                          </Link>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="secondary" 
+                              size="xs"
+                              onClick={() => handleOpenAssistantModal(c)}
+                            >
+                              + Asisten
+                            </Button>
+                            <Link href={`/recap/${c.id}`}>
+                              <Button variant="ghost" size="xs">Rekap</Button>
+                            </Link>
+                          </div>
                         </div>
-                        {c.assistants && c.assistants.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Asisten: {c.assistants.map(a => a.user?.name).join(', ')}
-                          </p>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -431,6 +503,64 @@ export default function AdminPage() {
           </>
         )}
       </main>
+
+      {/* Assistant Assignment Modal */}
+      <Modal
+        isOpen={showAssistantModal}
+        onClose={() => setShowAssistantModal(false)}
+        title="Tambah Asisten"
+      >
+        <div className="space-y-4">
+          {selectedClass && (
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-900">
+                {selectedClass.course?.code} - {selectedClass.name}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {dayNames[selectedClass.day_of_week || 1]} • {selectedClass.time_slot?.label}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Pilih Pengguna sebagai Asisten
+            </label>
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              {availableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email}) {user.nim ? `- NIM: ${user.nim}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Pilih mahasiswa atau pengguna yang akan menjadi asisten untuk kelas ini
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              onClick={() => setShowAssistantModal(false)}
+              variant="secondary"
+              fullWidth
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleAssignAssistant}
+              loading={assigningAssistant}
+              disabled={!selectedUserId}
+              fullWidth
+            >
+              Tambah Asisten
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -16,6 +16,7 @@ export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [activeTab, setActiveTab] = useState('PENDING');
+  const [viewMode, setViewMode] = useState<'grouped' | 'individual'>('grouped');
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [previewFile, setPreviewFile] = useState<{url: string, name: string} | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -92,6 +93,89 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  // Group payments by student and proof file
+  const groupedPayments = payments.reduce((acc, payment) => {
+    const key = `${payment.student_id}-${payment.proof_file_url}`;
+    if (!acc[key]) {
+      acc[key] = {
+        student: payment.student,
+        proofFile: payment.proof_file_url,
+        proofFileName: payment.proof_file_name,
+        payments: []
+      };
+    }
+    acc[key].payments.push(payment);
+    return acc;
+  }, {} as Record<string, { student: any; proofFile: string; proofFileName: string; payments: Payment[] }>);
+
+  const handleVerifyGroup = async (groupPayments: Payment[]) => {
+    if (!confirm(`Verifikasi ${groupPayments.length} pembayaran sekaligus?`)) return;
+    
+    setVerifying(true);
+    setMessage(null);
+    
+    const results = {
+      success: 0,
+      failed: 0
+    };
+    
+    try {
+      for (const payment of groupPayments) {
+        try {
+          await api.verifyPayment(payment.id);
+          results.success++;
+        } catch (err) {
+          results.failed++;
+        }
+      }
+      
+      if (results.success > 0) {
+        setMessage({ 
+          type: results.failed === 0 ? 'success' : 'error',
+          text: `✓ ${results.success} pembayaran terverifikasi${results.failed > 0 ? `, ${results.failed} gagal` : ''}`
+        });
+      }
+      
+      await loadPayments();
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleRejectGroup = async (groupPayments: Payment[]) => {
+    if (!confirm(`Tolak ${groupPayments.length} pembayaran sekaligus?`)) return;
+    
+    setVerifying(true);
+    setMessage(null);
+    
+    const results = {
+      success: 0,
+      failed: 0
+    };
+    
+    try {
+      for (const payment of groupPayments) {
+        try {
+          await api.rejectPayment(payment.id);
+          results.success++;
+        } catch (err) {
+          results.failed++;
+        }
+      }
+      
+      if (results.success > 0) {
+        setMessage({ 
+          type: results.failed === 0 ? 'success' : 'error',
+          text: `✓ ${results.success} pembayaran ditolak${results.failed > 0 ? `, ${results.failed} gagal` : ''}`
+        });
+      }
+      
+      await loadPayments();
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   if (loading || !user?.is_admin) {
     return <LoadingInline className="min-h-screen" />;
   }
@@ -121,7 +205,7 @@ export default function AdminPaymentsPage() {
         )}
 
         {/* Tabs */}
-        <div className="mb-6">
+        <div className="mb-4">
           <Tabs
             tabs={[
               { id: 'PENDING', label: 'Menunggu Verifikasi' },
@@ -133,6 +217,29 @@ export default function AdminPaymentsPage() {
           />
         </div>
 
+        {/* View Mode Toggle */}
+        {activeTab === 'PENDING' && payments.length > 0 && (
+          <Card className="mb-4" padding="sm">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Tampilan:</span>
+              <Button
+                size="sm"
+                variant={viewMode === 'grouped' ? 'primary' : 'secondary'}
+                onClick={() => setViewMode('grouped')}
+              >
+                Dikelompokkan
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'individual' ? 'primary' : 'secondary'}
+                onClick={() => setViewMode('individual')}
+              >
+                Individual
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {loadingData ? (
           <LoadingInline />
         ) : payments.length === 0 ? (
@@ -143,7 +250,85 @@ export default function AdminPaymentsPage() {
               description={`Tidak ada pembayaran dengan status ${activeTab.toLowerCase()}`}
             />
           </Card>
+        ) : viewMode === 'grouped' && activeTab === 'PENDING' ? (
+          /* Grouped View */
+          <div className="space-y-4">
+            {Object.values(groupedPayments).map((group, idx) => (
+              <Card key={idx} padding="sm">
+                <div className="space-y-3">
+                  {/* Student Info */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{group.student?.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        {group.student?.email} {group.student?.nim && `• NIM: ${group.student.nim}`}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setPreviewFile({
+                        url: group.proofFile,
+                        name: group.proofFileName
+                      })}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Lihat Bukti
+                    </Button>
+                  </div>
+
+                  {/* Payment List */}
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-700 uppercase">
+                      {group.payments.length} Kelas Terdaftar
+                    </p>
+                    {group.payments.map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between text-sm">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900">
+                            {payment.class?.course.code} - {payment.class?.name}
+                          </span>
+                          {payment.theory_class && (
+                            <span className="ml-2 text-indigo-600 text-xs">
+                              Teori: {payment.theory_class}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-gray-600">
+                          IDR {payment.amount.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="pt-2 border-t border-gray-200 flex justify-between font-semibold">
+                      <span>Total:</span>
+                      <span>IDR {group.payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleVerifyGroup(group.payments)}
+                      loading={verifying}
+                      size="sm"
+                      fullWidth
+                    >
+                      Verifikasi Semua ({group.payments.length})
+                    </Button>
+                    <Button
+                      onClick={() => handleRejectGroup(group.payments)}
+                      variant="danger"
+                      size="sm"
+                      fullWidth
+                    >
+                      Tolak Semua
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : (
+          /* Individual View */
           <div className="space-y-3">
             {payments.map((payment) => (
               <Card key={payment.id} padding="sm">

@@ -10,6 +10,8 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { api } from '@/lib/api';
 
+import { exportGradesToExcel, GradeExportData, SessionInfo } from '@/lib/exportUtils';
+
 export default function AdminClassGradesPage() {
   const params = useParams();
   const router = useRouter();
@@ -22,6 +24,8 @@ export default function AdminClassGradesPage() {
   const [data, setData] = useState<any>(null);
   const [grades, setGrades] = useState<Record<string, number>>({});
   const [editMode, setEditMode] = useState<Record<string, boolean>>({});
+  const [theoryClassFilter, setTheoryClassFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'nim' | 'theory'>('name');
 
   useEffect(() => {
     loadData();
@@ -93,6 +97,72 @@ export default function AdminClassGradesPage() {
     setEditMode(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleExport = () => {
+    if (!data) return;
+    
+    // Prepare export data
+    const exportData: GradeExportData[] = data.students
+      .filter((student: any) => {
+        // Apply same filters as display
+        if (theoryClassFilter) {
+          const studentTheoryClass = student.theory_class || '';
+          return studentTheoryClass.toUpperCase().includes(theoryClassFilter);
+        }
+        return true;
+      })
+      .sort((a: any, b: any) => {
+        if (sortBy === 'name') {
+          return a.name.localeCompare(b.name);
+        } else if (sortBy === 'nim') {
+          return (a.nim || '').localeCompare(b.nim || '');
+        } else if (sortBy === 'theory') {
+          return (a.theory_class || '').localeCompare(b.theory_class || '');
+        }
+        return 0;
+      })
+      .map((student: any) => {
+        const studentGrades: Record<string, number | null> = {};
+        let gradeSum = 0;
+        let gradeCount = 0;
+        
+        data.sessions.forEach((session: any) => {
+          const key = `${student.id}-${session.id}`;
+          const grade = grades[key];
+          studentGrades[session.id] = grade !== undefined && grade !== null ? grade : null;
+          
+          if (grade !== undefined && grade !== null) {
+            gradeSum += grade;
+            gradeCount++;
+          }
+        });
+        
+        const average = gradeCount > 0 ? gradeSum / gradeCount : 0;
+        
+        return {
+          name: student.name,
+          nim: student.nim,
+          theory_class: student.theory_class || '-',
+          practicum_class: data.class.name,
+          grades: studentGrades,
+          average
+        };
+      });
+    
+    const sessions: SessionInfo[] = data.sessions.map((s: any) => ({
+      id: s.id,
+      session_number: s.session_number,
+      topic: s.topic,
+      type: s.type
+    }));
+    
+    exportGradesToExcel(
+      exportData,
+      sessions,
+      data.class.name,
+      data.class.course.name
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -131,6 +201,54 @@ export default function AdminClassGradesPage() {
         {error && <Alert type="error" className="mb-4" dismissible onDismiss={() => setError('')}>{error}</Alert>}
         {success && <Alert type="success" className="mb-4" dismissible onDismiss={() => setSuccess('')}>{success}</Alert>}
 
+        {/* Filters */}
+        <Card className="mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter Kelas Teori
+              </label>
+              <Input
+                type="text"
+                placeholder="Contoh: A, B, C, D"
+                value={theoryClassFilter}
+                onChange={(e) => setTheoryClassFilter(e.target.value.toUpperCase())}
+                className="max-w-xs"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Urutkan Berdasarkan
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="name">Nama</option>
+                <option value="nim">NIM</option>
+                <option value="theory">Kelas Teori</option>
+              </select>
+            </div>
+            <div className="flex gap-2 mt-6">
+              {theoryClassFilter && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setTheoryClassFilter('')}
+                >
+                  Reset Filter
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                onClick={handleExport}
+              >
+                📥 Export Excel
+              </Button>
+            </div>
+          </div>
+        </Card>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <Card className="text-center">
@@ -158,6 +276,12 @@ export default function AdminClassGradesPage() {
                   <th className="sticky left-0 bg-white px-4 py-3 text-left font-semibold text-gray-900 border-r border-gray-200 z-10">
                     Mahasiswa
                   </th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900 min-w-[100px]">
+                    Kelas Teori
+                  </th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-900 min-w-[120px]">
+                    Kelas Praktikum
+                  </th>
                   {data.sessions.map((session: any) => (
                     <th key={session.id} className="px-4 py-3 text-center font-semibold text-gray-900 min-w-[120px]">
                       <div>P{session.session_number}</div>
@@ -172,7 +296,27 @@ export default function AdminClassGradesPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.students.map((student: any) => {
+                {data.students
+                  .filter((student: any) => {
+                    // Filter by theory class
+                    if (theoryClassFilter) {
+                      const studentTheoryClass = student.theory_class || '';
+                      return studentTheoryClass.toUpperCase().includes(theoryClassFilter);
+                    }
+                    return true;
+                  })
+                  .sort((a: any, b: any) => {
+                    // Sort by selected field
+                    if (sortBy === 'name') {
+                      return a.name.localeCompare(b.name);
+                    } else if (sortBy === 'nim') {
+                      return (a.nim || '').localeCompare(b.nim || '');
+                    } else if (sortBy === 'theory') {
+                      return (a.theory_class || '').localeCompare(b.theory_class || '');
+                    }
+                    return 0;
+                  })
+                  .map((student: any) => {
                   const studentGrades = data.sessions
                     .map((s: any) => grades[`${student.id}-${s.id}`])
                     .filter((g: number) => g !== undefined && g !== null);
@@ -186,6 +330,16 @@ export default function AdminClassGradesPage() {
                       <td className="sticky left-0 bg-white px-4 py-3 border-r border-gray-200 z-10">
                         <div className="font-medium text-gray-900">{student.name}</div>
                         <div className="text-xs text-gray-500">{student.nim}</div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant="primary" size="sm">
+                          {student.theory_class || '-'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-sm text-gray-700">
+                          {data.class.name}
+                        </span>
                       </td>
                       {data.sessions.map((session: any) => {
                         const key = `${student.id}-${session.id}`;

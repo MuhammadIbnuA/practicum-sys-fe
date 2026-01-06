@@ -20,7 +20,7 @@ export default function PaymentPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [fileName, setFileName] = useState('');
   const [fileData, setFileData] = useState('');
-  const [theoryClass, setTheoryClass] = useState('');
+  const [theoryClassMap, setTheoryClassMap] = useState<Record<number, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
@@ -64,16 +64,69 @@ export default function PaymentPage() {
   };
 
   const handleToggleClass = (classId: number) => {
-    setSelectedClasses(prev => 
-      prev.includes(classId) 
+    setSelectedClasses(prev => {
+      const newSelected = prev.includes(classId) 
         ? prev.filter(id => id !== classId)
-        : [...prev, classId]
-    );
+        : [...prev, classId];
+      
+      // Initialize theory class for newly selected class
+      if (!prev.includes(classId)) {
+        setTheoryClassMap(prevMap => ({
+          ...prevMap,
+          [classId]: ''
+        }));
+      }
+      
+      // Check for schedule conflicts
+      if (!prev.includes(classId)) {
+        const conflicts = checkScheduleConflicts([...newSelected], classes);
+        if (conflicts.length > 0) {
+          setMessage({
+            type: 'error',
+            text: `⚠️ Konflik jadwal terdeteksi: ${conflicts.map(c => `${c[0]} vs ${c[1]}`).join(', ')}`
+          });
+        }
+      }
+      
+      return newSelected;
+    });
+  };
+
+  const checkScheduleConflicts = (selectedIds: number[], allClasses: ClassItem[]) => {
+    const conflicts: [string, string][] = [];
+    
+    for (let i = 0; i < selectedIds.length; i++) {
+      for (let j = i + 1; j < selectedIds.length; j++) {
+        const class1 = allClasses.find(c => c.id === selectedIds[i]);
+        const class2 = allClasses.find(c => c.id === selectedIds[j]);
+        
+        if (class1 && class2 &&
+            class1.day_of_week === class2.day_of_week &&
+            class1.time_slot?.id === class2.time_slot?.id) {
+          conflicts.push([
+            `${class1.course.code}-${class1.name}`,
+            `${class2.course.code}-${class2.name}`
+          ]);
+        }
+      }
+    }
+    
+    return conflicts;
   };
 
   const handleSubmitPayment = async () => {
-    if (selectedClasses.length === 0 || !fileName || !fileData || !theoryClass) {
-      setMessage({ type: 'error', text: 'Silakan pilih kelas, isi kelas teori, dan upload bukti transfer' });
+    // Validate theory classes
+    const missingTheoryClasses = selectedClasses.filter(
+      classId => !theoryClassMap[classId] || theoryClassMap[classId].trim() === ''
+    );
+    
+    if (selectedClasses.length === 0 || !fileName || !fileData) {
+      setMessage({ type: 'error', text: 'Silakan pilih kelas dan upload bukti transfer' });
+      return;
+    }
+    
+    if (missingTheoryClasses.length > 0) {
+      setMessage({ type: 'error', text: 'Silakan isi kelas teori untuk semua kelas yang dipilih' });
       return;
     }
 
@@ -81,42 +134,50 @@ export default function PaymentPage() {
     setMessage(null);
     
     const results = {
-      success: [] as number[],
-      failed: [] as { classId: number; error: string }[]
+      success: [] as { classId: number; className: string }[],
+      failed: [] as { classId: number; className: string; error: string }[]
     };
 
     try {
       // Submit payment for each selected class
       for (const classId of selectedClasses) {
+        const cls = classes.find(c => c.id === classId);
+        const className = cls ? `${cls.course.code} - ${cls.name}` : `Class ${classId}`;
+        
         try {
-          await api.submitPayment(classId, theoryClass, fileName, fileData);
-          results.success.push(classId);
+          await api.submitPayment(classId, theoryClassMap[classId], fileName, fileData);
+          results.success.push({ classId, className });
         } catch (err) {
           results.failed.push({
             classId,
+            className,
             error: err instanceof Error ? err.message : 'Gagal mengirim'
           });
         }
       }
 
-      // Show results
-      if (results.success.length > 0) {
-        const successMsg = `Berhasil mengirim ${results.success.length} pembayaran. Menunggu verifikasi admin.`;
-        const failMsg = results.failed.length > 0 
-          ? ` ${results.failed.length} pembayaran gagal.`
-          : '';
+      // Show detailed results
+      if (results.success.length > 0 && results.failed.length === 0) {
         setMessage({ 
-          type: results.failed.length === 0 ? 'success' : 'error', 
-          text: successMsg + failMsg 
+          type: 'success', 
+          text: `✓ Berhasil mengirim ${results.success.length} pembayaran. Menunggu verifikasi admin.`
+        });
+      } else if (results.success.length > 0 && results.failed.length > 0) {
+        setMessage({ 
+          type: 'error', 
+          text: `✓ ${results.success.length} berhasil, ✗ ${results.failed.length} gagal: ${results.failed.map(f => f.className).join(', ')}`
         });
       } else {
-        setMessage({ type: 'error', text: 'Semua pembayaran gagal dikirim' });
+        setMessage({ 
+          type: 'error', 
+          text: `✗ Semua pembayaran gagal: ${results.failed.map(f => `${f.className} (${f.error})`).join(', ')}`
+        });
       }
 
       setShowPaymentModal(false);
       setFileName('');
       setFileData('');
-      setTheoryClass('');
+      setTheoryClassMap({});
       setSelectedClasses([]);
       setBulkMode(false);
       
@@ -367,7 +428,7 @@ export default function PaymentPage() {
           setShowPaymentModal(false);
           setFileName('');
           setFileData('');
-          setTheoryClass('');
+          setTheoryClassMap({});
           if (!bulkMode) setSelectedClasses([]);
         }}
         title="Upload Bukti Transfer"
@@ -412,20 +473,40 @@ export default function PaymentPage() {
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-              Kelas Teori *
+          {/* Theory Class Inputs - One per selected class */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-900">
+              Kelas Teori untuk Setiap Kelas *
             </label>
-            <input
-              type="text"
-              placeholder="Contoh: A, B, C, D"
-              value={theoryClass}
-              onChange={(e) => setTheoryClass(e.target.value.toUpperCase())}
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              maxLength={10}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Masukkan kelas teori Anda (berbeda dengan kelas praktikum)
+            {selectedClasses.map(classId => {
+              const cls = classes.find(c => c.id === classId);
+              return cls ? (
+                <div key={classId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {cls.course.code} - {cls.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {cls.day_name} • {cls.time_slot?.start_time}
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="A, B, C..."
+                    value={theoryClassMap[classId] || ''}
+                    onChange={(e) => setTheoryClassMap({
+                      ...theoryClassMap,
+                      [classId]: e.target.value.toUpperCase()
+                    })}
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center font-medium"
+                    maxLength={10}
+                    required
+                  />
+                </div>
+              ) : null;
+            })}
+            <p className="text-xs text-gray-500">
+              Masukkan kelas teori untuk setiap kelas praktikum (bisa berbeda)
             </p>
           </div>
 
@@ -465,7 +546,7 @@ export default function PaymentPage() {
                 setShowPaymentModal(false);
                 setFileName('');
                 setFileData('');
-                setTheoryClass('');
+                setTheoryClassMap({});
                 if (!bulkMode) setSelectedClasses([]);
               }}
               variant="outline"

@@ -280,6 +280,19 @@ class ApiClient {
         return this.request<ClassItem[]>('/api/admin/classes');
     }
 
+    async assignAssistant(classId: number, userId: number) {
+        return this.request(`/api/admin/classes/${classId}/assistants`, {
+            method: 'POST',
+            body: JSON.stringify({ user_id: userId }),
+        });
+    }
+
+    async removeAssistant(classId: number, userId: number) {
+        return this.request(`/api/admin/classes/${classId}/assistants/${userId}`, {
+            method: 'DELETE',
+        });
+    }
+
     async adminUpdateAttendance(sessionId: number, updates: { studentId: number; status: string }[]) {
         return this.request<{ updated: number }>(`/api/admin/sessions/${sessionId}/attendance`, {
             method: 'PUT',
@@ -615,6 +628,7 @@ export interface Payment {
     id: number;
     student_id: number;
     class_id: number;
+    theory_class?: string;
     amount: number;
     proof_file_name: string;
     proof_file_url: string;
